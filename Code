@@ -1,0 +1,153 @@
+#include <Wire.h>
+#include <MPU6050.h>
+#include <TinyGPS++.h>
+#include <HardwareSerial.h>
+
+MPU6050 mpu;
+TinyGPSPlus gps;
+
+HardwareSerial GPS(1);
+HardwareSerial GSM(2);
+
+// GPS
+#define GPS_RX 16
+#define GPS_TX 17
+
+// GSM
+#define GSM_RX 26
+#define GSM_TX 27
+
+// Pins
+#define BUZZER 13
+#define BUTTON 12
+
+const char phone[] = "+91XXXXXXXXXX";
+
+bool accident = false;
+
+void setup() {
+
+Serial.begin(115200);
+
+Wire.begin();
+
+mpu.initialize();
+
+pinMode(BUZZER, OUTPUT);
+pinMode(BUTTON, INPUT_PULLUP);
+
+GPS.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
+
+GSM.begin(9600, SERIAL_8N1, GSM_RX, GSM_TX);
+
+delay(3000);
+
+sendCommand("AT");
+sendCommand("AT+CMGF=1");
+
+}
+
+void loop() {
+
+while (GPS.available()) {
+gps.encode(GPS.read());
+}
+
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+
+mpu.getMotion6(&ax,&ay,&az,&gx,&gy,&gz);
+
+float acc = sqrt((ax*ax)+(ay*ay)+(az*az))/16384.0;
+
+if(acc>2.5 && !accident){
+
+accident=true;
+
+digitalWrite(BUZZER,HIGH);
+
+unsigned long t=millis();
+
+while(millis()-t<15000){
+
+while(GPS.available())
+gps.encode(GPS.read());
+
+if(digitalRead(BUTTON)==LOW){
+
+digitalWrite(BUZZER,LOW);
+
+accident=false;
+
+return;
+
+}
+
+}
+
+digitalWrite(BUZZER,LOW);
+
+sendSMS();
+
+delay(10000);
+
+accident=false;
+
+}
+
+}
+
+void sendSMS(){
+
+String msg="Accident Detected!\n";
+
+if(gps.location.isValid()){
+
+msg+="Location:\n";
+
+msg+="https://maps.google.com/?q=";
+
+msg+=String(gps.location.lat(),6);
+
+msg+=",";
+
+msg+=String(gps.location.lng(),6);
+
+}else{
+
+msg+="GPS Not Fixed";
+
+}
+
+GSM.println("AT+CMGF=1");
+delay(1000);
+
+GSM.print("AT+CMGS=\"");
+GSM.print(phone);
+GSM.println("\"");
+
+delay(1000);
+
+GSM.print(msg);
+
+delay(500);
+
+GSM.write(26);
+
+delay(5000);
+
+}
+
+void sendCommand(String cmd){
+
+GSM.println(cmd);
+
+delay(1000);
+
+while(GSM.available()){
+
+Serial.write(GSM.read());
+
+}
+
+}
