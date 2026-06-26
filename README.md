@@ -254,14 +254,7 @@ Accident-Detection-and-Alert-System/
 
 Electronics & Communication Engineering (ECE)
 
-Interested in **Embedded Systems, IoT, VLSI, and Semiconductor Design.**
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
+Interested in **Embedded Systems, IoT, VLSI, and Semiconductor Design.
 ---
 
 ⭐ If you found this project useful, consider giving this repository a **Star**.
